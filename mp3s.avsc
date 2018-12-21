@@ -1,0 +1,8 @@
+{"namespace": "example.avro",
+ "type": "record",
+ "name": "mp3",
+ "fields": [
+     {"name": "name", "type": "string"},
+     {"name": "file",  "type": "bytes"}
+ ]
+}
