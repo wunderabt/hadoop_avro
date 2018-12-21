@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.avro.file.CodecFactory;
 
 import example.avro.mp3;
 
@@ -55,10 +56,21 @@ public class MapReduceMD5sum extends Configured implements Tool {
       CharSequence mp3_name = key.datum().getName();
       ByteBuffer mp3_content = key.datum().getFile();
 
+      // write the file to disk
       File file = new File(mp3_name.toString() + ".out");
       FileChannel write_channel = new FileOutputStream(file, false).getChannel();
       write_channel.write(mp3_content);
       write_channel.close();
+
+      // run an external command on it
+      //Process p = Runtime.getRuntime().exec("md5sum " + mp3_name.toString() + ".out > " + mp3_name.toString() + ".md5");
+      Process p = Runtime.getRuntime().exec(System.getProperty("user.dir") + "/md5sumw.sh " + mp3_name.toString() + ".out");
+      if( p.waitFor() != 0) {
+        System.out.println("OHOH");
+        System.out.println(p.getOutputStream());
+      }
+
+      System.out.println("HALLOHALLO" + p.getOutputStream());
 
       context.write(new AvroKey<String>(mp3_name.toString()),
                     new AvroValue<ByteBuffer>(mp3_content));
@@ -94,6 +106,7 @@ public class MapReduceMD5sum extends Configured implements Tool {
     AvroJob.setInputKeySchema(job, mp3.getClassSchema());
     AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
     AvroJob.setMapOutputValueSchema(job, Schema.create(Schema.Type.BYTES));
+    // AvroJob.CONF_OUTPUT_CODEC = CodecFactory.deflate();
 
     job.setOutputFormatClass(AvroKeyValueOutputFormat.class);
     job.setReducerClass(MD5sumReducer.class);
