@@ -19,6 +19,10 @@
 package example;
 
 import java.io.IOException;
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
 
 import org.apache.avro.Schema;
 import org.apache.avro.mapred.AvroKey;
@@ -50,8 +54,15 @@ public class MapReduceMD5sum extends Configured implements Tool {
     public void map(AvroKey<mp3> key, NullWritable value, Context context)
         throws IOException, InterruptedException {
 
-      CharSequence file_name = key.datum().getName();
-      context.write(new Text(file_name.toString()), new IntWritable(1));
+      CharSequence mp3_name = key.datum().getName();
+      ByteBuffer mp3_content = key.datum().getFile();
+
+      File file = new File(mp3_name.toString() + ".out");
+      FileChannel write_channel = new FileOutputStream(file, false).getChannel();
+      write_channel.write(mp3_content);
+      write_channel.close();
+
+      context.write(new Text(mp3_name.toString()), new IntWritable(1));
     }
   }
 
@@ -78,7 +89,7 @@ public class MapReduceMD5sum extends Configured implements Tool {
 
     Job job = new Job(getConf());
     job.setJarByClass(MapReduceMD5sum.class);
-    job.setJobName("Color Count");
+    job.setJobName("MD5sum");
 
     FileInputFormat.setInputPaths(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
@@ -93,6 +104,9 @@ public class MapReduceMD5sum extends Configured implements Tool {
     job.setReducerClass(MD5sumReducer.class);
     AvroJob.setOutputKeySchema(job, Schema.create(Schema.Type.STRING));
     AvroJob.setOutputValueSchema(job, Schema.create(Schema.Type.INT));
+    // AvroJob.setOutputCodec(job, "deflate"); // compress - faster alternative: "snappy"
+    
+    job.setNumReduceTasks(1); // TODO: couldn't we use more than a single reducer?
 
     return (job.waitForCompletion(true) ? 0 : 1);
   }
