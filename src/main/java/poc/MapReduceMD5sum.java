@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.nio.channels.FileChannel;
 
 import org.apache.avro.Schema;
@@ -64,16 +65,19 @@ public class MapReduceMD5sum extends Configured implements Tool {
 
       // run an external command on it
       //Process p = Runtime.getRuntime().exec("md5sum " + mp3_name.toString() + ".out > " + mp3_name.toString() + ".md5");
-      Process p = Runtime.getRuntime().exec(System.getProperty("user.dir") + "/md5sumw.sh " + mp3_name.toString() + ".out");
-      if( p.waitFor() != 0) {
-        System.out.println("OHOH");
-        System.out.println(p.getOutputStream());
-      }
+      //Process p = Runtime.getRuntime().exec(System.getProperty("user.dir") + "/md5sumw.sh " + mp3_name.toString() + ".out");
+      Process p = Runtime.getRuntime().exec("gzip " + mp3_name.toString() + ".out");
+      p.waitFor();
 
-      System.out.println("HALLOHALLO" + p.getOutputStream());
+      // read the output and add as value
+      long zipfile_length = new File(mp3_name.toString() + ".out.gz").length();
+      FileInputStream zipfile = new FileInputStream(mp3_name.toString() + ".out.gz");
+      ByteBuffer zipfile_content = ByteBuffer.allocate((int) zipfile_length);
+      zipfile.getChannel().read(zipfile_content);
+      zipfile.close();
 
       context.write(new AvroKey<String>(mp3_name.toString()),
-                    new AvroValue<ByteBuffer>(mp3_content));
+                    new AvroValue<ByteBuffer>(zipfile_content));
     }
   }
 
