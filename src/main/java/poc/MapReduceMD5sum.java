@@ -32,9 +32,7 @@ import org.apache.avro.mapreduce.AvroKeyInputFormat;
 import org.apache.avro.mapreduce.AvroKeyValueOutputFormat;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -48,7 +46,7 @@ import example.avro.mp3;
 public class MapReduceMD5sum extends Configured implements Tool {
 
   public static class MD5sumMapper extends
-      Mapper<AvroKey<mp3>, NullWritable, Text, IntWritable> {
+      Mapper<AvroKey<mp3>, NullWritable, AvroKey<String>, AvroValue<ByteBuffer>> {
 
     @Override
     public void map(AvroKey<mp3> key, NullWritable value, Context context)
@@ -62,22 +60,19 @@ public class MapReduceMD5sum extends Configured implements Tool {
       write_channel.write(mp3_content);
       write_channel.close();
 
-      context.write(new Text(mp3_name.toString()), new IntWritable(1));
+      context.write(new AvroKey<String>(mp3_name.toString()),
+                    new AvroValue<ByteBuffer>(mp3_content));
     }
   }
 
   public static class MD5sumReducer extends
-      Reducer<Text, IntWritable, AvroKey<CharSequence>, AvroValue<Integer>> {
+      Reducer<AvroKey<String>, AvroValue<ByteBuffer>, AvroKey<String>, AvroValue<Integer>> {
 
     @Override
-    public void reduce(Text key, Iterable<IntWritable> values,
+    public void reduce(AvroKey<String> key, Iterable<AvroValue<ByteBuffer>> values,
         Context context) throws IOException, InterruptedException {
 
-      int sum = 0;
-      for (IntWritable value : values) {
-        sum += value.get();
-      }
-      context.write(new AvroKey<CharSequence>(key.toString()), new AvroValue<Integer>(sum));
+      context.write(new AvroKey<String>(key.toString()), new AvroValue<Integer>(5));
     }
   }
 
@@ -97,8 +92,8 @@ public class MapReduceMD5sum extends Configured implements Tool {
     job.setInputFormatClass(AvroKeyInputFormat.class);
     job.setMapperClass(MD5sumMapper.class);
     AvroJob.setInputKeySchema(job, mp3.getClassSchema());
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(IntWritable.class);
+    AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
+    AvroJob.setMapOutputValueSchema(job, Schema.create(Schema.Type.BYTES));
 
     job.setOutputFormatClass(AvroKeyValueOutputFormat.class);
     job.setReducerClass(MD5sumReducer.class);
