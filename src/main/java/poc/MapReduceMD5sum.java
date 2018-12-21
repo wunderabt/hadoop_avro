@@ -74,10 +74,12 @@ public class MapReduceMD5sum extends Configured implements Tool {
       FileInputStream zipfile = new FileInputStream(mp3_name.toString() + ".out.gz");
       ByteBuffer zipfile_content = ByteBuffer.allocate((int) zipfile_length);
       zipfile.getChannel().read(zipfile_content);
-      zipfile.close();
+
+      //System.out.println("WRITTEN " + zipfile_content.position());
 
       context.write(new AvroKey<String>(mp3_name.toString()),
                     new AvroValue<ByteBuffer>(zipfile_content));
+      zipfile.close();
     }
   }
 
@@ -88,7 +90,12 @@ public class MapReduceMD5sum extends Configured implements Tool {
     public void reduce(AvroKey<String> key, Iterable<AvroValue<ByteBuffer>> values,
         Context context) throws IOException, InterruptedException {
 
-      context.write(new AvroKey<String>(key.toString()), new AvroValue<Integer>(5));
+      int bytelength = -1;
+      for (AvroValue<ByteBuffer> buf : values) {
+        System.out.println("REDUCING!!!! -- " + buf);
+        bytelength = buf.datum().capacity();
+      }
+      context.write(new AvroKey<String>(key.toString()), new AvroValue<Integer>(bytelength));
     }
   }
 
