@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package example;
+package poc;
 
 import java.io.IOException;
 import java.io.File;
@@ -41,7 +41,6 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.avro.file.CodecFactory;
 
 import example.avro.mp3;
 
@@ -75,8 +74,10 @@ public class MapReduceMD5sum extends Configured implements Tool {
       ByteBuffer zipfile_content = ByteBuffer.allocate((int) zipfile_length);
       zipfile.getChannel().read(zipfile_content);
 
-      //System.out.println("WRITTEN " + zipfile_content.position());
-
+      //System.out.println("WRITTEN " + zipfile_content.position() +
+      //                   " / " + zipfile_content.limit() +
+      //                   " / " + zipfile_content.capacity());
+      zipfile_content.flip(); // like python: seek(0)
       context.write(new AvroKey<String>(mp3_name.toString()),
                     new AvroValue<ByteBuffer>(zipfile_content));
       zipfile.close();
@@ -92,7 +93,7 @@ public class MapReduceMD5sum extends Configured implements Tool {
 
       int bytelength = -1;
       for (AvroValue<ByteBuffer> buf : values) {
-        System.out.println("REDUCING!!!! -- " + buf);
+        //System.out.println("REDUCING!!!! -- " + buf);
         bytelength = buf.datum().capacity();
       }
       context.write(new AvroKey<String>(key.toString()), new AvroValue<Integer>(bytelength));
