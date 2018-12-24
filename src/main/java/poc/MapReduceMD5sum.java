@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.nio.channels.FileChannel;
 
 import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileConstants;
 import org.apache.avro.mapred.AvroKey;
 import org.apache.avro.mapred.AvroValue;
 import org.apache.avro.mapreduce.AvroJob;
@@ -41,6 +42,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.avro.file.DataFileConstants;
 
 import example.avro.mp3;
 
@@ -112,19 +114,21 @@ public class MapReduceMD5sum extends Configured implements Tool {
 
     FileInputFormat.setInputPaths(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    // use "deflate" = LZW compression for all avros
+    FileOutputFormat.setCompressOutput(job, true);
+    job.getConfiguration().set(AvroJob.CONF_OUTPUT_CODEC, DataFileConstants.DEFLATE_CODEC);
 
     job.setInputFormatClass(AvroKeyInputFormat.class);
     job.setMapperClass(MD5sumMapper.class);
     AvroJob.setInputKeySchema(job, mp3.getClassSchema());
     AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
     AvroJob.setMapOutputValueSchema(job, Schema.create(Schema.Type.BYTES));
-    // AvroJob.CONF_OUTPUT_CODEC = CodecFactory.deflate();
 
     job.setOutputFormatClass(AvroKeyValueOutputFormat.class);
     job.setReducerClass(MD5sumReducer.class);
     AvroJob.setOutputKeySchema(job, Schema.create(Schema.Type.STRING));
     AvroJob.setOutputValueSchema(job, Schema.create(Schema.Type.INT));
-    // AvroJob.setOutputCodec(job, "deflate"); // compress - faster alternative: "snappy"
+
     
     job.setNumReduceTasks(1); // TODO: couldn't we use more than a single reducer?
 

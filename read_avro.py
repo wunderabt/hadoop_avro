@@ -8,5 +8,6 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
 with open(sys.argv[1], "rb") as avro_fh, DataFileReader(avro_fh, DatumReader()) as reader:
+    print("Codec: {}".format(reader.codec))
     for mp3 in reader:
         print(json.dumps(mp3))
